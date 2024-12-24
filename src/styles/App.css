@@ -1,0 +1,9 @@
+body {
+    font-family: Arial, sans-serif;
+  }  
+  .error-message {
+    font-size: 14px;
+    margin-top: 10px;
+    color: #e53e3e; /* Red color */
+  }
+  

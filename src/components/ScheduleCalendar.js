@@ -4,12 +4,28 @@ import 'react-calendar/dist/Calendar.css';
 import { PackageContext } from '../context/PackageContext';
 
 const ScheduleCalendar = () => {
-  const { selectedPackage, scheduledDates, setScheduledDates } = useContext(PackageContext);
+  const { 
+    selectedPackage, 
+    scheduledDates, 
+    setScheduledDates, 
+    carDetails, 
+    setCarDetails 
+  } = useContext(PackageContext);
+
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [isCarDetailsProvided, setIsCarDetailsProvided] = useState(
+    carDetails.carModel && carDetails.licensePlate && carDetails.color
+  );
+  const [isReviewing, setIsReviewing] = useState(false);
 
   const handleDateSelect = (date) => {
     if (!selectedPackage) {
       alert('Please select a package first.');
+      return;
+    }
+
+    if (!isCarDetailsProvided) {
+      alert('Please provide car details before scheduling.');
       return;
     }
 
@@ -38,41 +54,158 @@ const ScheduleCalendar = () => {
     setScheduledDates(scheduledDates.filter((d) => d.getTime() !== date.getTime()));
   };
 
+  const handleCarDetailsSubmit = (e) => {
+    e.preventDefault();
+    if (carDetails.carModel && carDetails.licensePlate && carDetails.color) {
+      setIsCarDetailsProvided(true);
+    } else {
+      alert('Please fill out all car details.');
+    }
+  };
+
+  const handleReview = () => {
+    setIsReviewing(true);
+  };
+
+  const handleSubmit = () => {
+    alert('Booking submitted successfully!');
+    // Clear existing data
+    setScheduledDates([]);
+    setCarDetails({ carModel: '', licensePlate: '', color: '' });
+    setIsCarDetailsProvided(false);
+    setIsReviewing(false);
+  };
+
+  const handleAddAnotherCar = () => {
+    setScheduledDates([]);
+    setCarDetails({ carModel: '', licensePlate: '', color: '' });
+    setIsCarDetailsProvided(false);
+    setIsReviewing(false);
+  };
+
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Schedule Your Washes</h2>
-      <Calendar
-        onChange={setCalendarDate}
-        value={calendarDate}
-        onClickDay={handleDateSelect}
-        tileClassName={({ date }) =>
-          scheduledDates.some((d) => d.getTime() === date.getTime())
-            ? 'bg-green-200'
-            : ''
-        }
-      />
-      {scheduledDates.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold">Scheduled Dates:</h3>
-          <ul className="list-disc ml-6">
-            {scheduledDates.map((date, index) => (
-              <li key={index} className="flex justify-between items-center">
-                {date.toDateString()}
-                <button
-                  className="ml-4 bg-red-500 text-white py-1 px-2 rounded-lg"
-                  onClick={() => handleRemoveDate(date)}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
+
+      {!isCarDetailsProvided && (
+        <div className="car-details-form mb-6">
+          <h3 className="text-lg font-semibold mb-2">Provide Your Car Details</h3>
+          <form onSubmit={handleCarDetailsSubmit}>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2" htmlFor="carModel">Car Model</label>
+              <input
+                type="text"
+                id="carModel"
+                value={carDetails.carModel}
+                onChange={(e) => setCarDetails({ ...carDetails, carModel: e.target.value })}
+                className="w-full border rounded px-3 py-2"
+                placeholder="Enter your car model"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2" htmlFor="licensePlate">License Plate</label>
+              <input
+                type="text"
+                id="licensePlate"
+                value={carDetails.licensePlate}
+                onChange={(e) => setCarDetails({ ...carDetails, licensePlate: e.target.value })}
+                className="w-full border rounded px-3 py-2"
+                placeholder="Enter your license plate"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2" htmlFor="color">Color</label>
+              <input
+                type="text"
+                id="color"
+                value={carDetails.color}
+                onChange={(e) => setCarDetails({ ...carDetails, color: e.target.value })}
+                className="w-full border rounded px-3 py-2"
+                placeholder="Enter your car color"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="bg-blue-500 text-white py-2 px-4 rounded"
+            >
+              Save Car Details
+            </button>
+          </form>
         </div>
       )}
-      {selectedPackage && (
-        <p className="mt-4 text-gray-700">
-          Remaining Washes: {selectedPackage.washes - scheduledDates.length}
-        </p>
+
+      {isCarDetailsProvided && !isReviewing && (
+        <>
+          <Calendar
+            onChange={setCalendarDate}
+            value={calendarDate}
+            onClickDay={handleDateSelect}
+            tileClassName={({ date }) =>
+              scheduledDates.some((d) => d.getTime() === date.getTime())
+                ? 'bg-green-200'
+                : ''
+            }
+          />
+          {scheduledDates.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold">Scheduled Dates:</h3>
+              <ul className="list-disc ml-6">
+                {scheduledDates.map((date, index) => (
+                  <li key={index} className="flex justify-between items-center">
+                    {date.toDateString()}
+                    <button
+                      className="ml-4 bg-red-500 text-white py-1 px-2 rounded-lg"
+                      onClick={() => handleRemoveDate(date)}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <button
+            onClick={handleReview}
+            className="mt-4 bg-blue-500 text-white py-2 px-4 rounded"
+          >
+            Review & Submit
+          </button>
+        </>
+      )}
+
+      {isReviewing && (
+        <div className="review-section mt-6">
+          <h3 className="text-lg font-semibold mb-4">Review Your Booking</h3>
+          <p><strong>Car Model:</strong> {carDetails.carModel}</p>
+          <p><strong>License Plate:</strong> {carDetails.licensePlate}</p>
+          <p><strong>Car Color:</strong> {carDetails.color}</p>
+          <h4 className="mt-4 text-md font-semibold">Scheduled Wash Dates:</h4>
+          <ul className="list-disc ml-6">
+            {scheduledDates.map((date, index) => (
+              <li key={index}>{date.toDateString()}</li>
+            ))}
+          </ul>
+          <div className="mt-4">
+            <button
+              onClick={handleSubmit}
+              className="bg-green-500 text-white py-2 px-4 rounded mr-4"
+            >
+              Submit
+            </button>
+            <button
+              onClick={handleAddAnotherCar}
+              className="bg-gray-500 text-white py-2 px-4 rounded"
+            >
+              Add Another Car
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

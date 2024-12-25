@@ -14,7 +14,7 @@ function SignInPage({ onSignIn }) {
     e.preventDefault();
 
     // Simulated authentication logic
-    const isAuthenticated = email === 'user@example.com' && password === 'password';
+    const isAuthenticated = email === 'jey@test.com' && password === '12345';
 
     if (isAuthenticated) {
       onSignIn(); // Notify App.js that the user is signed in

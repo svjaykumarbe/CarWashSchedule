@@ -5,6 +5,11 @@ export const PackageContext = createContext();
 export const PackageProvider = ({ children }) => {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [scheduledDates, setScheduledDates] = useState([]);
+  const [carDetails, setCarDetails] = useState({
+    carModel: '',
+    licensePlate: '',
+    color: ''
+  }); // Initialize carDetails with default structure
 
   return (
     <PackageContext.Provider
@@ -13,6 +18,8 @@ export const PackageProvider = ({ children }) => {
         setSelectedPackage,
         scheduledDates,
         setScheduledDates,
+        carDetails, // Provide carDetails state
+        setCarDetails, // Provide carDetails updater
       }}
     >
       {children}

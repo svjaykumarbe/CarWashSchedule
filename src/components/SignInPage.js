@@ -1,26 +1,35 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';  // Using useNavigate
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios'; // To handle API calls
 import './SignInPage.css';
 
 function SignInPage({ onSignIn }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');  // For displaying error messages
+  const [errorMessage, setErrorMessage] = useState(''); // For displaying error messages
 
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Simulated authentication logic
-    const isAuthenticated = email === 'jey@test.com' && password === '12345';
+    try {
+      // Make an API call to authenticate the user
+      const response = await axios.post('http://localhost:4000/api/login', {
+        email,
+        password,
+      });
 
-    if (isAuthenticated) {
-      onSignIn(); // Notify App.js that the user is signed in
-      navigate('/dashboard'); // Navigate to the dashboard or main page
-    } else {
-      setErrorMessage('Invalid credentials, please try again.');
+      if (response.data.success) {
+        onSignIn(); // Notify App.js that the user is signed in
+        navigate('/dashboard'); // Navigate to the dashboard or main page
+      } else {
+        setErrorMessage(response.data.message || 'Invalid credentials, please try again.');
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      setErrorMessage('An error occurred during login. Please try again later.');
     }
   };
 

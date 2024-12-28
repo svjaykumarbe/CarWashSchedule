@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'; // Use Routes instead of Switch in React Router v6
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom'; // Use Link instead of useNavigate
 import { PackageProvider } from './context/PackageContext';
 import PackageSelector from './components/PackageSelector';
 import ScheduleCalendar from './components/ScheduleCalendar';
+import SignInPage from './components/SignInPage';
+import SignupPage from './components/SignupPage'; // Import the SignupPage component
 import './styles/App.css';
 import { Car } from 'lucide-react';
-import SignInPage from './components/SignInPage'; // Import the SignInPage component
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Manage authentication state
+  const [isSignUpMode, setIsSignUpMode] = useState(true); // Track button mode (Sign Up or Sign In)
 
-  const handleSignIn = () => {
-    setIsAuthenticated(true);  // Set authentication state to true
+  const handleToggleAuth = () => {
+    setIsSignUpMode(!isSignUpMode); // Toggle button state
   };
 
   return (
@@ -26,12 +28,13 @@ function App() {
                 <h1 className="text-3xl font-bold">Car Wash Scheduler</h1>
               </div>
               {!isAuthenticated ? (
-                <button
-                  onClick={() => handleSignIn()} // Directly handle sign in
+                <Link
+                  to={isSignUpMode ? '/signup' : '/signin'}
+                  onClick={handleToggleAuth}
                   className="bg-white text-blue-600 py-2 px-4 rounded-lg font-semibold shadow hover:bg-gray-100"
                 >
-                  Sign In
-                </button>
+                  {isSignUpMode ? 'Sign Up' : 'Sign In'}
+                </Link>
               ) : (
                 <button
                   onClick={() => setIsAuthenticated(false)} // Log out
@@ -59,37 +62,48 @@ function App() {
           {/* Main Content */}
           <main className="container mx-auto py-12 space-y-12">
             <Routes>
-              <Route path="/signin" element={<SignInPage onSignIn={handleSignIn} />} />
-              <Route path="/dashboard" element={isAuthenticated ? (
-                <>
-                  <section className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Select Your Package</h2>
-                    <PackageSelector />
-                  </section>
+              <Route path="/signin" element={<SignInPage onSignIn={() => setIsAuthenticated(true)} />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  isAuthenticated ? (
+                    <>
+                      <section className="bg-white shadow rounded-lg p-6">
+                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Select Your Package</h2>
+                        <PackageSelector />
+                      </section>
 
-                  <section className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Schedule Your Washes</h2>
-                    <ScheduleCalendar />
-                  </section>
-                </>
-              ) : (
-                <SignInPage onSignIn={handleSignIn} />
-              )} />
-              <Route path="/" element={isAuthenticated ? (
-                <>
-                  <section className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Select Your Package</h2>
-                    <PackageSelector />
-                  </section>
+                      <section className="bg-white shadow rounded-lg p-6">
+                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Schedule Your Washes</h2>
+                        <ScheduleCalendar />
+                      </section>
+                    </>
+                  ) : (
+                    <SignInPage onSignIn={() => setIsAuthenticated(true)} />
+                  )
+                }
+              />
+              <Route
+                path="/"
+                element={
+                  isAuthenticated ? (
+                    <>
+                      <section className="bg-white shadow rounded-lg p-6">
+                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Select Your Package</h2>
+                        <PackageSelector />
+                      </section>
 
-                  <section className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Schedule Your Washes</h2>
-                    <ScheduleCalendar />
-                  </section>
-                </>
-              ) : (
-                <SignInPage onSignIn={handleSignIn} />
-              )} />
+                      <section className="bg-white shadow rounded-lg p-6">
+                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Schedule Your Washes</h2>
+                        <ScheduleCalendar />
+                      </section>
+                    </>
+                  ) : (
+                    <SignInPage onSignIn={() => setIsAuthenticated(true)} />
+                  )
+                }
+              />
             </Routes>
           </main>
 

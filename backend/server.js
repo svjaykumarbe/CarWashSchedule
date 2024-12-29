@@ -1,3 +1,4 @@
+// Required Imports
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -15,11 +16,11 @@ app.use(bodyParser.json());
 const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  server: process.env.DB_SERVER, // Azure SQL server
+  server: process.env.DB_SERVER,
   database: process.env.DB_NAME,
   options: {
-    encrypt: true, // Use encryption for Azure SQL
-    trustServerCertificate: true, // Set to true if self-signed certs are used
+    encrypt: true,
+    trustServerCertificate: true,
     connectTimeout: 30000,
   },
 };
@@ -32,11 +33,9 @@ let pool;
     console.log('Connected to Azure SQL Database');
   } catch (err) {
     console.error('Database connection failed:', err);
-    process.exit(1); // Exit process if the database connection fails
+    process.exit(1);
   }
 })();
-
-// API Endpoints
 
 // 1. Add a new user
 app.post('/api/signup', async (req, res) => {
@@ -81,73 +80,106 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    return res.status(400).json({ error: 'Email and password are required' });
   }
 
   try {
-    const result = await pool
-      .request()
-      .input('Email', sql.NVarChar, email)
-      .input('PasswordHash', sql.NVarChar, password)
-      .query('SELECT * FROM Users WHERE Email = @Email AND PasswordHash = @PasswordHash');
+    const result = await pool.request()
+      .input('email', sql.NVarChar, email)
+      .input('password', sql.NVarChar, password)
+      .query(`SELECT * FROM Users WHERE Email = @email AND Password = @password`);
 
-    if (result.recordset.length > 0) {
-      const user = result.recordset[0];
-      res.status(200).json({ success: true, message: 'Login successful', user });
-    } else {
-      res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    if (result.recordset.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    const user = result.recordset[0];
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      user,
+    });
   } catch (err) {
     console.error('Error during login:', err);
-    res.status(500).json({ success: false, message: 'An error occurred during login. Please try again later.' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// 4. Save Car Details and Scheduled Dates
-app.post('/api/car-details', async (req, res) => {
-  const { userId, carMake, carModel, registrationNumber, color, scheduledDates } = req.body;
+// 4. Save Car Details and Schedule
+app.post('/api/bookings', async (req, res) => {
+  const { userId, carMake, carModel, registrationNumber, color, additionalNotes, serviceId, scheduledDates, scheduledPackage, status = 'Scheduled' } = req.body;
 
-  // Validate input
-  if (!userId || !carMake || !carModel || !registrationNumber || !color || !Array.isArray(scheduledDates) || scheduledDates.length === 0) {
-    return res.status(400).json({ error: 'All fields (userId, carMake, carModel, registrationNumber, color, scheduledDates) are required and scheduledDates must be a non-empty array.' });
+  // Validate required fields
+  if (!userId || !carMake || !carModel || !registrationNumber || !color || !serviceId || !scheduledDates || !Array.isArray(scheduledDates) || scheduledDates.length === 0) {
+    return res.status(400).json({ error: 'All fields (userId, carMake, carModel, registrationNumber, color, serviceId, and scheduledDates) are required.' });
   }
 
   let transaction;
 
   try {
-    // Start transaction for car details and scheduled dates
+    // Start a transaction
     transaction = new sql.Transaction(pool);
     await transaction.begin();
 
-    // Insert car details into CarDetails table
-    const carResult = await transaction
-      .request()
-      .input('UserId', sql.Int, userId)
-      .input('CarMake', sql.NVarChar, carMake)
-      .input('CarModel', sql.NVarChar, carModel)
-      .input('RegistrationNumber', sql.NVarChar, registrationNumber)
-      .input('Color', sql.NVarChar, color)
-      .query(
-        'INSERT INTO CarDetails (UserId, CarMake, CarModel, RegistrationNumber, Color) OUTPUT INSERTED.CarId VALUES (@UserId, @CarMake, @CarModel, @RegistrationNumber, @Color)'
-      );
+    const scheduleIds = []; // Store all generated Schedule IDs
 
-    const carId = carResult.recordset[0].CarId;
+    // Loop over scheduledDates array to insert each scheduled date
+    for (let i = 0; i < scheduledDates.length; i++) {
+      const scheduledDateTime = scheduledDates[i];  // Each scheduled date in ISO format
 
-    // Insert each scheduled date into ScheduledDates table
-    for (const date of scheduledDates) {
+      // Insert Schedule
+      const scheduleResult = await transaction
+        .request()
+        .input('UserID', sql.NVarChar, userId)
+        .input('ServiceID', sql.Int, serviceId)
+        .input('ScheduledPackage', sql.NVarChar, scheduledPackage)
+        .input('Status', sql.NVarChar, status)
+        .query(`
+          INSERT INTO Schedules (UserID, ServiceID, ScheduledPackage, Status, CreatedAt)
+          OUTPUT INSERTED.ScheduleID
+          VALUES (@UserID, @ServiceID, @ScheduledPackage, @Status, GETDATE());
+        `);
+
+      const scheduleId = scheduleResult.recordset[0].ScheduleID;
+      scheduleIds.push(scheduleId);
+
+      // Insert CarDetails Table for each scheduled date
+      const carDetailsResult = await transaction
+        .request()
+        .input('UserID', sql.NVarChar, userId)
+        .input('ScheduleID', sql.Int, scheduleId)
+        .input('CarMake', sql.NVarChar, carMake)
+        .input('CarModel', sql.NVarChar, carModel)
+        .input('RegistrationNumber', sql.NVarChar, registrationNumber)
+        .input('Color', sql.NVarChar, color)
+        .input('AdditionalNotes', sql.NVarChar, additionalNotes || null)
+        .query(`
+          INSERT INTO CarDetails (UserID, ScheduleID, CarMake, CarModel, RegistrationNumber, Color, AdditionalNotes, CreatedAt)
+          OUTPUT INSERTED.CarID
+          VALUES (@UserID, @ScheduleID, @CarMake, @CarModel, @RegistrationNumber, @Color, @AdditionalNotes, GETDATE());
+        `);
+
+      // Insert into ScheduledDates Table for each scheduled date
       await transaction
         .request()
-        .input('CarId', sql.Int, carId)
-        .input('ScheduledDate', sql.Date, new Date(date))
-        .query('INSERT INTO ScheduledDates (CarId, ScheduledDate) VALUES (@CarId, @ScheduledDate)');
+        .input('ScheduleID', sql.Int, scheduleId)
+        .input('ScheduledDateTime', sql.DateTime, scheduledDateTime)
+        .query(`
+          INSERT INTO ScheduledDates (ScheduleID, ScheduledDateTime)
+          VALUES (@ScheduleID, @ScheduledDateTime);
+        `);
     }
 
-    // Commit transaction
+    // Commit Transaction
     await transaction.commit();
 
-    res.status(201).json({ message: 'Car details and scheduled dates saved successfully.' });
+    res.status(201).json({
+      message: 'Car details, schedules, and scheduled dates saved successfully.',
+      scheduleIds,  // Return an array of all schedule IDs created
+    });
   } catch (err) {
-    // Rollback transaction if there is an error
+    // Rollback Transaction on Error
     if (transaction) {
       try {
         await transaction.rollback();
@@ -156,10 +188,12 @@ app.post('/api/car-details', async (req, res) => {
       }
     }
 
-    console.error('Error saving car details and scheduled dates:', err);
-    res.status(500).json({ error: 'Failed to save car details or scheduled dates. Please try again later.' });
+    console.error('Error saving car details, schedules, and scheduled dates:', err);
+    res.status(500).json({ error: 'Failed to save car details, schedules, or scheduled dates. Please try again later.' });
   }
 });
+
+// Other Endpoints
 
 // Handle 404 for undefined routes
 app.use((req, res) => {

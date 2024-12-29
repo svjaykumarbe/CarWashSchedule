@@ -79,23 +79,29 @@ const ScheduleCalendar = () => {
 
   const handleSubmit = async () => {
     try {
+
       const requestData = {
-        userId: userId || '01',
+        userId: userId || '01', // Ensure that userId is passed correctly
         carMake: carDetails.carMake || '',
         carModel: carDetails.carModel,
         registrationNumber: carDetails.licensePlate,
         color: carDetails.color,
         additionalNotes: carDetails.additionalNotes || '',
-        scheduledDates: scheduledDates.map((date) => date.toISOString()),
+        serviceId: selectedPackage.serviceId || '02',  // Ensure this field is valid
+        scheduledDates: scheduledDates.length > 0 
+          ? scheduledDates.map((date) => date.toISOString()) // Ensure it's an array of valid ISO strings
+          : [], // In case no dates are selected
       };
 
       console.log('Request Payload:', requestData); // Debugging log
 
-      const response = await axios.post('http://localhost:4000/api/car-details', requestData);
+      // Send request to the backend API to save car details and schedule
+      const response = await axios.post('http://localhost:4000/api/bookings', requestData); // Change URL to '/api/bookings'
 
       alert('Booking submitted successfully!');
       console.log('Response:', response.data);
 
+      // Reset form and state after successful submission
       setScheduledDates([]);
       setCarDetails({ carModel: '', licensePlate: '', color: '', carMake: '', additionalNotes: '' });
       setIsCarDetailsProvided(false);

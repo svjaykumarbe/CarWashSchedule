@@ -1,19 +1,18 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom'; // Use Link instead of useNavigate
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import { PackageProvider } from './context/PackageContext';
 import PackageSelector from './components/PackageSelector';
 import ScheduleCalendar from './components/ScheduleCalendar';
 import SignInPage from './components/SignInPage';
-import SignupPage from './components/SignupPage'; // Import the SignupPage component
+import SignupPage from './components/SignupPage';
 import './styles/App.css';
-import { Car } from 'lucide-react';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Manage authentication state
-  const [isSignUpMode, setIsSignUpMode] = useState(true); // Track button mode (Sign Up or Sign In)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(true);
 
   const handleToggleAuth = () => {
-    setIsSignUpMode(!isSignUpMode); // Toggle button state
+    setIsSignUpMode(!isSignUpMode);
   };
 
   return (
@@ -24,7 +23,11 @@ function App() {
           <header className="bg-blue-600 text-white py-6 shadow-lg">
             <div className="container mx-auto flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Car className="w-8 h-8" />
+                <img
+                  src="/logo.png"
+                  alt="Car Wash Scheduler Logo"
+                  className="w-16 h-16 object-contain"
+                />
                 <h1 className="text-3xl font-bold">Car Wash Scheduler</h1>
               </div>
               {!isAuthenticated ? (
@@ -37,7 +40,7 @@ function App() {
                 </Link>
               ) : (
                 <button
-                  onClick={() => setIsAuthenticated(false)} // Log out
+                  onClick={() => setIsAuthenticated(false)}
                   className="bg-white text-blue-600 py-2 px-4 rounded-lg font-semibold shadow hover:bg-gray-100"
                 >
                   Sign Out
@@ -47,15 +50,33 @@ function App() {
           </header>
 
           {/* Hero Section */}
-          <section className="bg-blue-100 py-12">
-            <div className="container mx-auto text-center space-y-4">
-              <h2 className="text-4xl font-bold text-blue-800">Schedule Your Car Wash Effortlessly</h2>
-              <p className="text-lg text-blue-600">
-                Choose a package and pick convenient dates for your car wash with ease.
-              </p>
-              <button className="bg-blue-600 text-white py-3 px-6 rounded-lg text-lg shadow hover:bg-blue-700">
-                Get Started
-              </button>
+          <section className="relative bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-16">
+            <div className="container mx-auto flex flex-col md:flex-row items-center justify-between">
+              {/* Left Content */}
+              <div className="text-center md:text-left md:w-1/2 space-y-6">
+                <h2 className="text-5xl font-extrabold">
+                  Schedule Your Car Wash <br /> With Ease
+                </h2>
+                <p className="text-lg">
+                  Choose your package, pick a date, and let us handle the rest. Effortless car wash scheduling for a busy life.
+                </p>
+                <p></p>
+                <Link
+                  to="/signup"
+                  className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-lg shadow hover:bg-gray-200"
+                >
+                  Get Started
+                </Link>
+              </div>
+
+              {/* Right Content */}
+              <div className="mt-10 md:mt-0 md:w-1/2 flex justify-center">
+                <img
+                  src="/Logo.png"
+                  alt="Car Wash Illustration"
+                  className="w-3/4 md:w-full max-w-md"
+                />
+              </div>
             </div>
           </section>
 
@@ -73,7 +94,6 @@ function App() {
                         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Select Your Package</h2>
                         <PackageSelector />
                       </section>
-
                       <section className="bg-white shadow rounded-lg p-6">
                         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Schedule Your Washes</h2>
                         <ScheduleCalendar />
@@ -93,7 +113,6 @@ function App() {
                         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Select Your Package</h2>
                         <PackageSelector />
                       </section>
-
                       <section className="bg-white shadow rounded-lg p-6">
                         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Schedule Your Washes</h2>
                         <ScheduleCalendar />

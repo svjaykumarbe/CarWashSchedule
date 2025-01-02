@@ -56,8 +56,7 @@ function SignInPage({ onSignIn }) {
     <div className="signin-container">
       <div className="signin-box">
         <header className="signin-header">
-          <img src="/Logo.png" alt="Car Wash Logo" className="signin-logo" />
-          <h2>Book Your Car Wash in Minutes</h2>
+          <h1>Book Your Car Wash in Minutes</h1>
         </header>
 
         <form onSubmit={handleSubmit} className="signin-form">

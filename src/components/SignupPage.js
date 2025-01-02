@@ -5,11 +5,11 @@ const SignupPage = () => {
   const [FullName, setName] = useState('');
   const [PhoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [PasswordHash, setPasswordHash] = useState('');
+  const [Password, setPassword] = useState('');
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!FullName || !PhoneNumber || !email || !PasswordHash) {
+    if (!FullName || !PhoneNumber || !email || !Password) {
       alert('Please fill in all fields.');
       return;
     }
@@ -19,7 +19,7 @@ const SignupPage = () => {
         FullName,
         PhoneNumber,
         email,
-        PasswordHash,
+        Password,
       });
 
       if (response.status === 201) {
@@ -27,7 +27,7 @@ const SignupPage = () => {
         setName('');
         setPhoneNumber('');
         setEmail('');
-        setPasswordHash('');
+        setPassword('');
       }
     } catch (error) {
       console.error('Error during signup:', error);
@@ -74,8 +74,8 @@ const SignupPage = () => {
             <label className="block text-sm font-medium text-gray-700">Password</label>
             <input
               type="password"
-              value={PasswordHash}
-              onChange={(e) => setPasswordHash(e.target.value)}
+              value={Password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 mt-1 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
               required
             />

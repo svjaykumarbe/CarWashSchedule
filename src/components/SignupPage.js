@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const SignupPage = () => {
   const [FullName, setName] = useState('');
   const [PhoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [Password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -23,11 +25,12 @@ const SignupPage = () => {
       });
 
       if (response.status === 201) {
-        alert('User registered successfully!');
+        alert('User registered successfully! Redirecting to Sign In page.');
         setName('');
         setPhoneNumber('');
         setEmail('');
         setPassword('');
+        navigate('/signin'); // Redirect to the Sign In page
       }
     } catch (error) {
       console.error('Error during signup:', error);

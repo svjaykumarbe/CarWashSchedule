@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sql = require('mssql');
+const jwt = require('jsonwebtoken'); // For JWT token handling
 require('dotenv').config();
 
 const app = express();
@@ -37,7 +38,7 @@ let pool;
   }
 })();
 
-// 1. Add a new user
+// 1. Add a new user (Sign Up)
 app.post('/api/signup', async (req, res) => {
   const { FullName, PhoneNumber, email, Password, userRole = 'User' } = req.body;
 
@@ -64,7 +65,7 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// 2. Get all users
+// 2. Get all users (Optional - for Admin usage)
 app.get('/api/users', async (req, res) => {
   try {
     const result = await pool.request().query('SELECT * FROM Users');
@@ -77,29 +78,35 @@ app.get('/api/users', async (req, res) => {
 
 // 3. User Login
 app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'Identifier (email or username) and password are required' });
   }
 
   try {
-    const result = await pool.request()
-      .input('email', sql.NVarChar, email)
+    const result = await pool
+      .request()
+      .input('identifier', sql.NVarChar, identifier)
       .input('password', sql.NVarChar, password)
-      .query(`SELECT * FROM Users WHERE Email = @email AND Password = @password`);
+      .query(`
+        SELECT * 
+        FROM Users 
+        WHERE (Email = @identifier OR FullName = @identifier) AND Password = @password
+      `);
 
     if (result.recordset.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = result.recordset[0];
+    const token = jwt.sign({ userId: user.UserID }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    // Send User details along with UserID in the response
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      user,  // UserID is part of this object
+      token,
+      user,
     });
   } catch (err) {
     console.error('Error during login:', err);
@@ -107,11 +114,10 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 4. Save Car Details and Schedule
+// 4. Save Car Details and Schedule (Book Schedule)
 app.post('/api/bookings', async (req, res) => {
   const { userId, carMake, carModel, registrationNumber, color, additionalNotes, serviceId, scheduledDates, scheduledPackage, status = 'Scheduled' } = req.body;
 
-  // Ensure all required fields are provided
   if (!userId || !carMake || !carModel || !registrationNumber || !color || !serviceId || !scheduledDates || !Array.isArray(scheduledDates) || scheduledDates.length === 0) {
     return res.status(400).json({ error: 'All fields are required.' });
   }
@@ -122,7 +128,6 @@ app.post('/api/bookings', async (req, res) => {
     transaction = new sql.Transaction(pool);
     await transaction.begin();
 
-    // Step 1: Insert into Schedules
     const scheduleResult = await transaction
       .request()
       .input('UserID', sql.Int, userId)
@@ -137,7 +142,6 @@ app.post('/api/bookings', async (req, res) => {
 
     const scheduleId = scheduleResult.recordset[0].ScheduleID;
 
-    // Step 2: Insert into CarDetails
     const carDetailsResult = await transaction
       .request()
       .input('UserID', sql.Int, userId)
@@ -155,9 +159,7 @@ app.post('/api/bookings', async (req, res) => {
 
     const carId = carDetailsResult.recordset[0].CarID;
 
-    // Step 3: Update Schedules with CarID
-    await transaction
-      .request()
+    await transaction.request()
       .input('ScheduleID', sql.Int, scheduleId)
       .input('CarID', sql.Int, carId)
       .query(`
@@ -166,10 +168,8 @@ app.post('/api/bookings', async (req, res) => {
         WHERE ScheduleID = @ScheduleID;
       `);
 
-    // Step 4: Insert into ScheduledDates
     for (const scheduledDate of scheduledDates) {
-      await transaction
-        .request()
+      await transaction.request()
         .input('ScheduleID', sql.Int, scheduleId)
         .input('ScheduledDateTime', sql.DateTime, scheduledDate)
         .query(`
@@ -178,9 +178,7 @@ app.post('/api/bookings', async (req, res) => {
         `);
     }
 
-    // Commit Transaction
     await transaction.commit();
-
     res.status(201).json({ message: 'Booking successfully created.' });
   } catch (err) {
     if (transaction) {
@@ -190,13 +188,61 @@ app.post('/api/bookings', async (req, res) => {
         console.error('Error during rollback:', rollbackErr);
       }
     }
-
     console.error('Error creating booking:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// Handle 404 for undefined routes
+// 5. Fetch Dashboard Data
+app.get('/api/dashboard', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // Extract token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Verify JWT token and decode it to get the userId
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { userId } = decoded;
+
+    // Fetch the user's car details
+    const carDetailsResult = await pool.request()
+      .input('UserID', sql.Int, userId)
+      .query(`
+        SELECT CarMake, CarModel, RegistrationNumber, Color, AdditionalNotes 
+        FROM CarDetails 
+        WHERE UserID = @UserID;
+      `);
+
+    // Fetch the user's schedule details and their associated statuses
+    const schedulesResult = await pool.request()
+      .input('UserID', sql.Int, userId)
+      .query(`
+        SELECT 
+          s.ScheduleID,
+          sd.ScheduledDateTime, 
+          s.Status,
+          s.ScheduledPackage
+        FROM ScheduledDates sd
+        INNER JOIN Schedules s ON sd.ScheduleID = s.ScheduleID
+        WHERE s.UserID = @UserID;
+      `);
+
+    const carDetails = carDetailsResult.recordset;
+    const schedules = schedulesResult.recordset;
+
+    res.status(200).json({
+      user: { userId, carDetails }, // Sending both userId and carDetails
+      schedules, // List of schedules with associated statuses
+    });
+  } catch (err) {
+    console.error('Error fetching dashboard data:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Handle 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });

@@ -4,7 +4,7 @@ import axios from 'axios'; // To handle API calls
 import './SignInPage.css';
 
 function SignInPage({ onSignIn }) {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Identifier can be email or username
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState(''); // For displaying error messages
@@ -14,7 +14,7 @@ function SignInPage({ onSignIn }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const loginData = { email, password };
+    const loginData = { identifier, password }; // Sending email or username along with password
 
     try {
       console.log('Sending login request:', loginData);
@@ -38,8 +38,16 @@ function SignInPage({ onSignIn }) {
           localStorage.setItem('token', response.data.token);
         }
 
-        onSignIn(); // Notify App.js that the user is signed in
-        navigate('/dashboard'); // Navigate to the dashboard or main page
+        // Optionally save user info (can be expanded based on requirements)
+        if (response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
+
+        // Notify App.js that the user is signed in
+        if (onSignIn) onSignIn();
+
+        // Redirect to the dashboard
+        navigate('/dashboard');
       } else {
         setErrorMessage(response.data.message || 'Invalid credentials, please try again.');
       }
@@ -55,18 +63,18 @@ function SignInPage({ onSignIn }) {
   return (
     <div className="signin-container">
       <div className="signin-box">
-        <header className="signin-header">
-          <h1>Book Your Car Wash in Minutes</h1>
+        <header className="signin-title">
+          <h2>Book Your Car Wash in Minutes</h2>
         </header>
 
         <form onSubmit={handleSubmit} className="signin-form">
           <div className="input-group">
-            <label htmlFor="email">Email or Username</label>
+            <label htmlFor="identifier">Email or Username</label>
             <input
               type="text"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="identifier"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               placeholder="Enter your email or username"
               className="input-field"

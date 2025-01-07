@@ -3,38 +3,47 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const SignupPage = () => {
-  const [FullName, setName] = useState('');
-  const [PhoneNumber, setPhoneNumber] = useState('');
+  const [fullName, setFullName] = useState(''); // Changed FullName to fullName for consistency
+  const [phoneNumber, setPhoneNumber] = useState(''); // Changed PhoneNumber to phoneNumber
   const [email, setEmail] = useState('');
-  const [Password, setPassword] = useState('');
+  const [password, setPassword] = useState(''); // Changed Password to password
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!FullName || !PhoneNumber || !email || !Password) {
+
+    // Check for empty fields
+    if (!fullName || !phoneNumber || !email || !password) {
       alert('Please fill in all fields.');
       return;
     }
 
     try {
       const response = await axios.post('http://localhost:4000/api/signup', {
-        FullName,
-        PhoneNumber,
+        fullName,
+        phoneNumber,
         email,
-        Password,
+        password,
       });
 
       if (response.status === 201) {
         alert('User registered successfully! Redirecting to Sign In page.');
-        setName('');
+        // Clear form fields
+        setFullName('');
         setPhoneNumber('');
         setEmail('');
         setPassword('');
-        navigate('/signin'); // Redirect to the Sign In page
+        // Redirect to Sign In page
+        navigate('/signin');
       }
     } catch (error) {
       console.error('Error during signup:', error);
-      alert('Failed to register user. Please try again later.');
+      if (error.response && error.response.data) {
+        // Show backend error message if available
+        alert(`Failed to register user: ${error.response.data.message}`);
+      } else {
+        alert('Failed to register user. Please try again later.');
+      }
     }
   };
 
@@ -44,11 +53,11 @@ const SignupPage = () => {
         <h2 className="text-2xl font-bold text-center mb-6">Sign Up</h2>
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <label className="block text-sm font-medium text-gray-700">Full Name</label>
             <input
               type="text"
-              value={FullName}
-              onChange={(e) => setName(e.target.value)}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               className="w-full px-4 py-2 mt-1 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
               required
             />
@@ -57,7 +66,7 @@ const SignupPage = () => {
             <label className="block text-sm font-medium text-gray-700">Contact Number</label>
             <input
               type="text"
-              value={PhoneNumber}
+              value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               className="w-full px-4 py-2 mt-1 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
               required
@@ -77,7 +86,7 @@ const SignupPage = () => {
             <label className="block text-sm font-medium text-gray-700">Password</label>
             <input
               type="password"
-              value={Password}
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 mt-1 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
               required
